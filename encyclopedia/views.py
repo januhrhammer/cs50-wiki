@@ -1,6 +1,7 @@
+from contextlib import redirect_stderr
 import random
 from urllib import response
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from markdown2 import Markdown
 from django.urls import reverse
 from django.http import HttpResponseRedirect
@@ -66,8 +67,8 @@ def create_page(request):
     if request.method == "POST":
         form = EntryForm(request.POST)
         if form.is_valid():
-            title = form["title"]
-            body = form["body"]
+            title = form.cleaned_data["title"]
+            body = form.cleaned_data["body"]
             if util.get_entry(title) == None:
                 util.save_entry(title, body)
                 return HttpResponseRedirect(f"wiki/{title}")
@@ -80,28 +81,20 @@ def create_page(request):
 def existing_page(request):
     return render(request, "encyclopedia/existing.html")
 
+class EditForm(forms.Form):
+    body = forms.CharField(label="Content", required=True, widget=forms.Textarea())
 
-def editentry(request, old_title):
-    """
-    render page with form
-    get title and body to prepopulate form
-    """
-    old_content = util.get_entry(old_title)
+def edit(request, title):
+    if request.method == "GET":
+        body = util.get_entry(title)
+        return render(request, "encyclopedia/editpage.html", {
+            "title": title,
+            "edit_form": EditForm(initial={"body":body})})
+    
+    elif request.method == "POST":
+        form = EditForm(request.POST)
 
-    class EditForm:
-        title = forms.CharField(label="Title", required=True, initial=old_title)
-        body = forms.CharField(label="Content", required=True, initial=old_content)
-
-    return render(request, "encyclopedia/editpage.html", {"form": EditForm()})
-
-
-def make_edit(request):
-    if request.method == "POST":
-        form = EntryForm()
         if form.is_valid():
-            title = form["title"]
-            body = form["body"]
+            body = form.cleaned_data["title"]
             util.save_entry(title, body)
-        return HttpResponseRedirect(f"wiki/{title}")
-    else:
-        return render(request, "encyclopedia/editpage.html", {"form": EntryForm()})
+            return redirect(reverse("title", args=[title]))

@@ -97,4 +97,4 @@ def edit(request, title):
         if form.is_valid():
             body = form.cleaned_data["body"]
             util.save_entry(title, body)
-            return redirect(reverse("title", args=[title]))
+            return HttpResponseRedirect(f"../wiki/{title}")

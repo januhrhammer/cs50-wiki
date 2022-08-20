@@ -95,6 +95,6 @@ def edit(request, title):
         form = EditForm(request.POST)
 
         if form.is_valid():
-            body = form.cleaned_data["title"]
+            body = form.cleaned_data["body"]
             util.save_entry(title, body)
             return redirect(reverse("title", args=[title]))

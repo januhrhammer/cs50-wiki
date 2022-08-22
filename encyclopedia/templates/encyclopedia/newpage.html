@@ -8,7 +8,7 @@
     <h1>Create a new entry</h1>
 
     <form action="{% url 'newpage' %}" method="post">{% csrf_token %}
-        {{ form.as_p }}
+        {{ entry_form }}
         <button type="Submit" value="Create new entry">Submit Entry</button>
     </form>
 

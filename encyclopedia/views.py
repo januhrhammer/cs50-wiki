@@ -1,9 +1,6 @@
-from contextlib import redirect_stderr
 import random
-from urllib import response
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from markdown2 import Markdown
-from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django import forms
 from . import util
@@ -16,7 +13,11 @@ def index(request):
     """
     Rendering index.html with a list of all article entries
     """
-    return render(request, "encyclopedia/index.html", {"entries": util.list_entries()})
+    return render(
+        request,
+        "encyclopedia/index.html",
+        {"entries": util.list_entries(), "form": SearchForm()},
+    )
 
 
 def entry(request, title):
@@ -30,7 +31,8 @@ def entry(request, title):
             return render(
                 request,
                 "encyclopedia/entry.html",
-                {"title": title, "content": markdowner.convert(util.get_entry(title))},
+                {"title": title, "content": markdowner.convert(util.get_entry(title)),
+                "search_form": SearchForm()}
             )
     return HttpResponseRedirect("/notfound")
 
@@ -39,7 +41,7 @@ def not_found(request):
     """
     Rendering the error page for a non-existing article
     """
-    return render(request, "encyclopedia/notfound.html")
+    return render(request, "encyclopedia/notfound.html", {"search_form": SearchForm()})
 
 
 def randompage(request):
@@ -75,22 +77,27 @@ def create_page(request):
             else:
                 return HttpResponseRedirect("/existing")
     else:
-        return render(request, "encyclopedia/newpage.html", {"form": EntryForm()})
+        return render(request, "encyclopedia/newpage.html", {"entry_form": EntryForm(),
+        "search_form": SearchForm()})
 
 
 def existing_page(request):
     return render(request, "encyclopedia/existing.html")
 
+
 class EditForm(forms.Form):
     body = forms.CharField(label="Content", required=True, widget=forms.Textarea())
+
 
 def edit(request, title):
     if request.method == "GET":
         body = util.get_entry(title)
-        return render(request, "encyclopedia/editpage.html", {
-            "title": title,
-            "edit_form": EditForm(initial={"body":body})})
-    
+        return render(
+            request,
+            "encyclopedia/editpage.html",
+            {"title": title, "edit_form": EditForm(initial={"body": body})},
+        )
+
     elif request.method == "POST":
         form = EditForm(request.POST)
 
@@ -98,3 +105,30 @@ def edit(request, title):
             body = form.cleaned_data["body"]
             util.save_entry(title, body)
             return HttpResponseRedirect(f"../wiki/{title}")
+
+
+def no_results(request):
+    return render(request, "encyclopedia/no_results.html")
+
+
+class SearchForm(forms.Form):
+    search = forms.CharField()
+
+
+def search(request):
+    if request.method == "GET":
+        form = SearchForm(request.GET)
+
+        if form.is_valid():
+            query = form.cleaned_data["search"]
+            entries = util.list_entries()
+            results = [entry for entry in entries if query.lower() in entry.lower()]
+            
+            if len(results) == 0:
+                return HttpResponseRedirect("/no_results")
+            elif len(results) == 1:
+                return HttpResponseRedirect(f"wiki/{results[0]}")
+            else:
+                return render(
+                    request, "encyclopedia/results.html", {"results": results}
+                )

@@ -1,9 +1,6 @@
-from contextlib import redirect_stderr
 import random
-from urllib import response
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from markdown2 import Markdown
-from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django import forms
 from . import util
@@ -16,7 +13,8 @@ def index(request):
     """
     Rendering index.html with a list of all article entries
     """
-    return render(request, "encyclopedia/index.html", {"entries": util.list_entries()})
+    return render(request, "encyclopedia/index.html", {"entries": util.list_entries(),
+    "form": SearchForm()})
 
 
 def entry(request, title):
@@ -98,3 +96,35 @@ def edit(request, title):
             body = form.cleaned_data["body"]
             util.save_entry(title, body)
             return HttpResponseRedirect(f"../wiki/{title}")
+
+
+
+class SearchForm(forms.Form):
+    search = forms.CharField()
+
+
+def search(request):
+    if request.method == "GET":
+        form = SearchForm(request.GET)
+
+        if form.is_valid():
+            query = form.cleaned_data["search"]
+            entries = util.list_entries()
+            results = []
+
+            for entry in entries:
+                if query.lower() == entry.lower():
+                    return HttpResponseRedirect(f"wiki/{entry}")
+                
+                elif query.lower() in entry.lower():
+                    results.append(query)
+                    return render(request, "encyclopedia/results.html", {
+                        "results": results
+                    })
+                else:
+                    return render(request, "encyclopedia/no_results.html" )
+
+        
+
+
+    

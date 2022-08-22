@@ -95,7 +95,8 @@ def edit(request, title):
         return render(
             request,
             "encyclopedia/editpage.html",
-            {"title": title, "edit_form": EditForm(initial={"body": body})},
+            {"title": title, "edit_form": EditForm(initial={"body": body}),
+            "search_form": SearchForm()},
         )
 
     elif request.method == "POST":
@@ -108,7 +109,7 @@ def edit(request, title):
 
 
 def no_results(request):
-    return render(request, "encyclopedia/no_results.html")
+    return render(request, "encyclopedia/no_results.html", {"search_form": SearchForm()})
 
 
 class SearchForm(forms.Form):
